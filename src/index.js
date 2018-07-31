@@ -162,6 +162,7 @@ class SentryCliPlugin {
       loader: SENTRY_LOADER,
       options: {
         releasePromise: this.release,
+        ravenConfig: this.options.ravenConfig,
       },
     };
 
@@ -177,6 +178,7 @@ class SentryCliPlugin {
           loader: SENTRY_LOADER,
           options: {
             releasePromise: this.release,
+            ravenConfig: this.options.ravenConfig,
           },
         },
       ],

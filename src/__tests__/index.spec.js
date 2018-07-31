@@ -15,6 +15,7 @@ const mockCli = {
 const SentryCliMock = jest.fn(configFile => mockCli);
 const SentryCli = jest.mock('@sentry/cli', () => SentryCliMock);
 const SentryCliPlugin = require('..');
+const SentryLoader = require('../sentry.loader');
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -463,5 +464,41 @@ describe('entry point overrides', () => {
     };
     sentryCliPlugin.options.entries = 42;
     expect(() => sentryCliPlugin.apply(compiler)).toThrowError(/entries/);
+  });
+
+  describe("ranven config", () => {
+    test("should inject raven initialization code for given config", (done) => {
+      const callback = (err, code) => {
+        expect(code).toBe(`global.SENTRY_RELEASE={};\nglobal.SENTRY_RELEASE.id=\"3\";\nvar R=require(\"raven-js\");\nR.config(\"https://example.com\", {dsn:'https://example.com',whitelistUrls:[/getsentry\\.com/,/cdn\\.getsentry\\.com/],dataCallback:function f(data) { return data; }}).install();`);
+        done();
+      };
+      const context = {
+        query: {
+          releasePromise: Promise.resolve(3),
+          ravenConfig: {
+            dsn: 'https://example.com',
+            whitelistUrls: [/getsentry\.com/, /cdn\.getsentry\.com/],
+            // use function constructor to skip prettier
+            dataCallback: new Function("return function f(data) { return data; }")()
+          }
+        },
+        async: () => callback
+      };
+      SentryLoader.call(context, undefined, undefined, undefined)
+    });
+
+    test("should inject release id only", (done) => {
+      const callback = (err, code) => {
+        expect(code).toBe(`global.SENTRY_RELEASE={};\nglobal.SENTRY_RELEASE.id=\"3\";`);
+        done();
+      };
+      const context = {
+        query: {
+          releasePromise: Promise.resolve(3),
+        },
+        async: () => callback
+      };
+      SentryLoader.call(context, undefined, undefined, undefined)
+    });
   });
 });
